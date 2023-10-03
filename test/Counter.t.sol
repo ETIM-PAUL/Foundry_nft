@@ -9,16 +9,16 @@ contract CounterTest is Test {
 
     function setUp() public {
         counter = new Counter();
-        counter.setNumber(0);
+        // counter.setNumbers(4, 6);
     }
 
-    function test_Increment() public {
-        counter.increment();
-        assertEq(counter.number(), 1);
+    function test_slot_0() public {
+        bytes32 data = vm.load(address(counter), bytes32(uint256(0)));
+        assertEq(uint128(uint256(data)), 4);
     }
 
-    function testFuzz_SetNumber(uint256 x) public {
-        counter.setNumber(x);
-        assertEq(counter.number(), x);
-    }
+    // function testFuzz_SetNumber(uint256 x) public {
+    //     counter.setNumber(x);
+    //     assertEq(counter.number(), x);
+    // }
 }
