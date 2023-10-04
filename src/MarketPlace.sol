@@ -1,77 +1,48 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import "solmate/tokens/ERC721.sol";
-import "openzeppelin-contracts/contracts/utils/Strings.sol";
-import "openzeppelin-contracts/contracts/access/Ownable.sol";
+import "./interface/ERC721.sol";
 
-contract NFT is ERC721, Ownable {
-    using Strings for uint256;
-    string public baseURI;
-    uint256 public currentTokenId;
-    uint256 public constant TOTAL_SUPPLY = 10_000;
-    uint256 public constant MINT_PRICE = 0.01 ether;
+contract MarketPlace {
+    event NFTSOLD(uint orderId);
 
-    error MintPriceNotPaid();
-    error MaxSupply();
-    error NonExistentTokenURI();
+    event NFTLISTED(uint orderId);
 
     struct Order {
         address owner;
+        address tokenAddress;
         uint tokenId;
         uint nftPrice;
         uint deadline;
-        bytes32 signature;
+        bytes signature;
+        bool active;
     }
 
-    mapping(uint => Order) allOrders;
+    //mapping to check if nft is not already listed
+    mapping(bytes32 => bool) public hashedToken;
+
+    mapping(uint => Order) public allOrders;
 
     uint orderId;
-    uint tokenId;
 
-    uint public constant TOTAL_SUPPLY = 10;
-
-    constructor(
-        string memory _name,
-        string memory _symbol,
-        string memory _baseURI
-    ) ERC721(_name, _symbol) {
-        baseURI = _baseURI;
-    }
-
-    function mintTo() public payable returns (uint256) {
-        if (msg.value != MINT_PRICE) {
-            revert MintPriceNotPaid();
-        }
-        uint256 newTokenId = ++tokenId;
-        if (newTokenId > TOTAL_SUPPLY) {
-            revert MaxSupply();
-        }
-        _safeMint(msg.sender, newTokenId);
-        return newTokenId;
-    }
-
-    function tokenURI(
-        uint256 _tokenId
-    ) public view virtual override returns (string memory) {
-        if (ownerOf(_tokenId) == address(0)) {
-            revert NonExistentTokenURI();
-        }
-        return
-            bytes(baseURI).length > 0
-                ? string(abi.encodePacked(baseURI, _tokenId.toString()))
-                : "";
-    }
+    constructor() {}
 
     function getOrderHash(
         address _tokenAddress,
         uint _tokenId,
         uint _price,
-        address _nftOwner
+        address _nftOwner,
+        uint deadline
     ) public pure returns (bytes32) {
         return
             keccak256(
-                abi.encodePacked(_tokenAddress, _tokenId, _price, _nftOwner)
+                abi.encodePacked(
+                    _tokenAddress,
+                    _tokenId,
+                    _price,
+                    _nftOwner,
+                    deadline
+                )
             );
     }
 
@@ -92,30 +63,163 @@ contract NFT is ERC721, Ownable {
     }
 
     function putNFTForSale(
-        bytes32 _signature,
+        bytes memory _signature,
         uint _tokenId,
+        address _tokenAddress,
         uint _price,
         uint _deadline
     ) public {
+        //checks that the seller is the owner of the nft
+        require(
+            ERC721(_tokenAddress).ownerOf(_tokenId) == msg.sender,
+            "Not Owner"
+        );
+
+        //checks that the seller has approves the marketplace to sell the nft
+        require(
+            ERC721(_tokenAddress).isApprovedForAll(msg.sender, address(this)),
+            "Please approve NFT to be sold"
+        );
+
+        //checks that token address is not address zero
+        require(_tokenAddress != address(0), "Zero address not allowed");
+
+        //checks that token address is not an EOA
+        require(isContract(), "Token address is an EOA");
+
+        //require that price is greater tahn zero
+        require(_price != 0, "Price must be greater than zero");
+
+        //require that deadline is one hour later than present time
+        require(
+            _deadline > (block.timestamp + 3600),
+            "Deadline must be one hour later than present time"
+        );
+
+        bytes32 hashedVal = hashedListing(_tokenAddress, _tokenId);
+
+        //checks if the nft has not been listed before
+        require(!hashedToken[hashedVal], "token has been listed");
+
         orderId++;
-        Order newOrder = allOrders[orderId];
+        Order storage newOrder = allOrders[orderId];
         newOrder.signature = _signature;
         newOrder.tokenId = _tokenId;
-        newOrder.price = _price;
+        newOrder.nftPrice = _price;
         newOrder.deadline = _deadline;
+        newOrder.tokenAddress = _tokenAddress;
+        newOrder.active = true;
+        hashedToken[hashedVal] = true;
+
+        emit NFTLISTED(orderId);
+    }
+
+    function buyNFT(uint _orderId) public payable {
+        Order storage order = allOrders[orderId];
+        address owner = order.owner;
+        address tokenAddress = order.tokenAddress;
+        uint tokenId = order.tokenId;
+        uint nftPrice = order.nftPrice;
+        uint deadline = order.deadline;
+        bytes memory signature = order.signature;
+        bool active = order.active;
+
+        bool isVerified = verify(
+            owner,
+            tokenAddress,
+            tokenId,
+            nftPrice,
+            deadline,
+            signature
+        );
+        require(isVerified, "Invalid Signature");
+        require(!active, "Listing not active");
+        require(deadline < block.timestamp, "Deadline passed");
+        require(
+            ((msg.value == nftPrice) || (msg.value != 0)),
+            "Incorrect Eth Value"
+        );
+
+        bytes32 hashedVal = hashedListing(tokenAddress, tokenId);
+
+        //to avoid re-entrancy attack, we reset the active state to false
+        active = false;
+        hashedToken[hashedVal] = false;
+        (bool callSuccess, ) = owner.call{value: msg.value}("");
+        require(callSuccess, "NFT Purchased failed");
+        ERC721(tokenAddress).safeTransferFrom(owner, msg.sender, tokenId);
+
+        emit NFTSOLD(_orderId);
     }
 
     function verify(
-        address _signer,
-        address _to,
-        uint _amount,
-        string memory _message,
-        uint _nonce,
+        address _nftOwner,
+        address _tokenAddress,
+        uint _tokenId,
+        uint _price,
+        uint _deadline,
         bytes memory signature
     ) public pure returns (bool) {
-        bytes32 messageHash = getMessageHash(_to, _amount, _message, _nonce);
-        bytes32 ethSignedMessageHash = getEthSignedMessageHash(messageHash);
+        bytes32 messageHash = getOrderHash(
+            _tokenAddress,
+            _tokenId,
+            _price,
+            _nftOwner,
+            _deadline
+        );
+        bytes32 ethSignedOrderHash = getEthSignedOrderHash(messageHash);
 
-        return recoverSigner(ethSignedMessageHash, signature) == _signer;
+        return recoverSigner(ethSignedOrderHash, signature) == _nftOwner;
+    }
+
+    function recoverSigner(
+        bytes32 ethSignedOrderHash,
+        bytes memory _signature
+    ) public pure returns (address) {
+        (bytes32 r, bytes32 s, uint8 v) = splitSignature(_signature);
+
+        return ecrecover(ethSignedOrderHash, v, r, s);
+    }
+
+    function splitSignature(
+        bytes memory sig
+    ) public pure returns (bytes32 r, bytes32 s, uint8 v) {
+        require(sig.length == 65, "invalid signature length");
+
+        assembly {
+            /*
+            First 32 bytes stores the length of the signature
+
+            add(sig, 32) = pointer of sig + 32
+            effectively, skips first 32 bytes of signature
+
+            mload(p) loads next 32 bytes starting at the memory address p into memory
+            */
+
+            // first 32 bytes, after the length prefix
+            r := mload(add(sig, 32))
+            // second 32 bytes
+            s := mload(add(sig, 64))
+            // final byte (first byte of the next 32 bytes)
+            v := byte(0, mload(add(sig, 96)))
+        }
+    }
+
+    //check if an account is a contract
+    function isContract() private view returns (bool) {
+        uint32 size;
+        address a = msg.sender;
+        assembly {
+            size := extcodesize(a)
+        }
+        return (size > 0);
+    }
+
+    //function to hash token listing to avoind duplicate
+    function hashedListing(
+        address _tokenAddress,
+        uint _tokenId
+    ) public pure returns (bytes32) {
+        return keccak256(abi.encodePacked(_tokenAddress, _tokenId));
     }
 }
