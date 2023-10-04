@@ -13,6 +13,7 @@ contract TestHelpers is Test {
     event NFTLISTED(uint orderId);
     event NFTSOLD(uint orderId);
     uint token_id;
+    uint orderId;
     uint deadline = block.timestamp + 3601;
 
     function constructSig(
@@ -50,7 +51,7 @@ contract TestHelpers is Test {
     function setUp() public {
         marketPlace = new MarketPlace();
         // Deploy NFT contract
-        nft = new NFT("NFT_tutorial", "TUT", "baseUri");
+        nft = new NFT("IDAN_NFT", "IDAN", "baseUri");
         token_id = nft.mintTo(
             address(0x9d4eF81F5225107049ba08F69F598D97B31ea644)
         );
@@ -59,21 +60,24 @@ contract TestHelpers is Test {
     }
 
     function test_CreateListing() public {
+        //List NFT
         vm.startPrank(0x9d4eF81F5225107049ba08F69F598D97B31ea644);
         bytes memory sig = constructSig(address(nft), token_id, 1e15, nftOwner);
         vm.expectEmit(true, false, false, false);
         // The event we expect
         emit NFTLISTED(1);
         marketPlace.putNFTForSale(sig, token_id, address(nft), 1e15, deadline);
+        orderId = 1;
         vm.stopPrank();
-    }
 
-    function test_BuyNft() public {
-        vm.startPrank(address(0x1));
+        vm.warp(block.timestamp + 3800);
+        //Buy NFT
+        vm.startPrank(0x1b6e16403b06a51C42Ba339E356a64fE67348e92);
+        vm.deal(0x1b6e16403b06a51C42Ba339E356a64fE67348e92, 1e18);
         vm.expectEmit(true, false, false, false);
         // The event we expect
         emit NFTSOLD(1);
-        marketPlace.buyNFT{value: 0.001 ether}(1);
+        marketPlace.buyNFT{value: 0.001 ether}(orderId);
         vm.stopPrank();
     }
 }

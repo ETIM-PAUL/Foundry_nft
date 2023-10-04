@@ -103,6 +103,7 @@ contract MarketPlace {
 
         orderId++;
         Order storage newOrder = allOrders[orderId];
+        newOrder.owner = msg.sender;
         newOrder.signature = _signature;
         newOrder.tokenId = _tokenId;
         newOrder.nftPrice = _price;
@@ -115,7 +116,7 @@ contract MarketPlace {
     }
 
     function buyNFT(uint _orderId) public payable {
-        Order storage order = allOrders[orderId];
+        Order storage order = allOrders[_orderId];
         address owner = order.owner;
         address tokenAddress = order.tokenAddress;
         uint tokenId = order.tokenId;
@@ -124,21 +125,18 @@ contract MarketPlace {
         bytes memory signature = order.signature;
         bool active = order.active;
 
-        // bool isVerified = verify(
-        //     owner,
-        //     tokenAddress,
-        //     tokenId,
-        //     nftPrice,
-        //     deadline,
-        //     signature
-        // );
-        // require(isVerified, "Invalid Signature");
+        bool isVerified = verify(
+            owner,
+            tokenAddress,
+            tokenId,
+            nftPrice,
+            deadline,
+            signature
+        );
+        require(isVerified, "Invalid Signature");
         require(active, "Listing not active");
         require(deadline < block.timestamp, "Deadline passed");
-        require(
-            ((msg.value == nftPrice) || (msg.value != 0)),
-            "Incorrect Eth Value"
-        );
+        require(msg.value == nftPrice, "Incorrect Eth Value");
 
         bytes32 hashedVal = hashedListing(tokenAddress, tokenId);
 
