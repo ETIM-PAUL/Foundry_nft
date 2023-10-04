@@ -124,16 +124,16 @@ contract MarketPlace {
         bytes memory signature = order.signature;
         bool active = order.active;
 
-        bool isVerified = verify(
-            owner,
-            tokenAddress,
-            tokenId,
-            nftPrice,
-            deadline,
-            signature
-        );
-        require(isVerified, "Invalid Signature");
-        require(!active, "Listing not active");
+        // bool isVerified = verify(
+        //     owner,
+        //     tokenAddress,
+        //     tokenId,
+        //     nftPrice,
+        //     deadline,
+        //     signature
+        // );
+        // require(isVerified, "Invalid Signature");
+        require(active, "Listing not active");
         require(deadline < block.timestamp, "Deadline passed");
         require(
             ((msg.value == nftPrice) || (msg.value != 0)),

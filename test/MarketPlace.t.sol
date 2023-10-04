@@ -2,18 +2,16 @@
 pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
-// import {Vm} from "forge-std/Vm.sol";
 import {MarketPlace} from "../src/MarketPlace.sol";
 import {NFT} from "../src/NFT.sol";
 
 contract TestHelpers is Test {
-    // Vm vm = Vm(0x9d4eF81F5225107049ba08F69F598D97B31ea644);
     NFT private nft;
     MarketPlace private marketPlace;
     address nftOwner = 0x9d4eF81F5225107049ba08F69F598D97B31ea644;
-    uint256 privKey =
-        0xff33adc380a7764580c24d476df5af380723a7f188e919cb5314038c4e3aa013;
+    uint256 privKey = vm.envUint("PK");
     event NFTLISTED(uint orderId);
+    event NFTSOLD(uint orderId);
     uint token_id;
     uint deadline = block.timestamp + 3601;
 
@@ -67,6 +65,15 @@ contract TestHelpers is Test {
         // The event we expect
         emit NFTLISTED(1);
         marketPlace.putNFTForSale(sig, token_id, address(nft), 1e15, deadline);
+        vm.stopPrank();
+    }
+
+    function test_BuyNft() public {
+        vm.startPrank(address(0x1));
+        vm.expectEmit(true, false, false, false);
+        // The event we expect
+        emit NFTSOLD(1);
+        marketPlace.buyNFT{value: 0.001 ether}(1);
         vm.stopPrank();
     }
 }
