@@ -77,7 +77,7 @@ contract MarketPlace {
 
         //checks that the seller has approves the marketplace to sell the nft
         require(
-            ERC721(_tokenAddress).isApprovedForAll(msg.sender, address(this)),
+            ERC721(_tokenAddress).getApproved(_tokenId) == address(this),
             "Please approve NFT to be sold"
         );
 
@@ -85,7 +85,7 @@ contract MarketPlace {
         require(_tokenAddress != address(0), "Zero address not allowed");
 
         //checks that token address is not an EOA
-        require(isContract(), "Token address is an EOA");
+        require(isContract(_tokenAddress), "Token address is an EOA");
 
         //require that price is greater tahn zero
         require(_price != 0, "Price must be greater than zero");
@@ -206,9 +206,9 @@ contract MarketPlace {
     }
 
     //check if an account is a contract
-    function isContract() private view returns (bool) {
+    function isContract(address _add) private view returns (bool) {
         uint32 size;
-        address a = msg.sender;
+        address a = _add;
         assembly {
             size := extcodesize(a)
         }
