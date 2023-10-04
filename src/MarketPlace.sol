@@ -87,7 +87,7 @@ contract MarketPlace {
         //checks that token address is not an EOA
         require(isContract(_tokenAddress), "Token address is an EOA");
 
-        //require that price is greater tahn zero
+        //require that price is greater than zero
         require(_price != 0, "Price must be greater than zero");
 
         //require that deadline is one hour later than present time
