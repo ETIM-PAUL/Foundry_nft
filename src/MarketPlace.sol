@@ -49,11 +49,8 @@ contract MarketPlace {
             "Please approve NFT to be sold"
         );
 
-        //checks that token address is not address zero
-        require(_tokenAddress != address(0), "Zero address not allowed");
-
         //checks that token address is not an EOA
-        require(Utils.isContract(_tokenAddress), "Token address is an EOA");
+        require(_tokenAddress.code.length > 0, "Token address is an EOA");
 
         //require that price is greater than zero
         require(_price != 0, "Price must be greater than zero");

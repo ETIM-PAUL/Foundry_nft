@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {Test, console2} from "forge-std/Test.sol";
-import "../src/libraries/marketPlaceUtils.sol";
+import "../src/library/marketPlaceUtils.sol";
 
 abstract contract Helpers is Test {
     // uint256 user
@@ -22,7 +22,7 @@ abstract contract Helpers is Test {
         uint88 _deadline,
         address _seller,
         uint256 privKey
-    ) public returns (bytes memory sig) {
+    ) public pure returns (bytes memory sig) {
         bytes32 mHash = keccak256(
             abi.encodePacked(_token, _tokenId, _price, _deadline, _seller)
         );

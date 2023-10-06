@@ -92,11 +92,6 @@ library Utils {
 
     //check if an account is a contract
     function isContract(address _add) internal view returns (bool) {
-        uint32 size;
-        address a = _add;
-        assembly {
-            size := extcodesize(a)
-        }
-        return (size > 0);
+        return (_add.code.length > 0);
     }
 }
