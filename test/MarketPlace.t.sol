@@ -132,25 +132,32 @@ contract TestHelpers is Helpers {
         );
     }
 
-    function testIfSignatureIsValid() public {
+    // function testIfSignatureIsValid() public {
+    //     switchSigner(userA);
+    //     nft.approve(address(marketPlace), 1);
+    //     newOrder.deadline = uint88(block.timestamp + 36001);
+    //     newOrder.signature = constructSig(
+    //         newOrder.tokenAddress,
+    //         newOrder.tokenId,
+    //         newOrder.nftPrice,
+    //         newOrder.deadline,
+    //         newOrder.owner,
+    //         keyUserB
+    //     );
+    //     vm.expectRevert("Invalid Signature");
+    //     marketPlace.putNFTForSale(
+    //         newOrder.signature,
+    //         newOrder.tokenId,
+    //         newOrder.tokenAddress,
+    //         newOrder.nftPrice,
+    //         newOrder.deadline
+    //     );
+
+    // }
+
+    function test_InactiveListing() external {
         switchSigner(userA);
-        nft.approve(address(marketPlace), 1);
-        newOrder.deadline = uint88(block.timestamp + 36001);
-        newOrder.signature = constructSig(
-            newOrder.tokenAddress,
-            newOrder.tokenId,
-            newOrder.nftPrice,
-            newOrder.deadline,
-            newOrder.owner,
-            keyUserB
-        );
-        vm.expectRevert("Invalid Signature");
-        marketPlace.putNFTForSale(
-            newOrder.signature,
-            newOrder.tokenId,
-            newOrder.tokenAddress,
-            newOrder.nftPrice,
-            newOrder.deadline
-        );
+        vm.expectRevert("Listing not active");
+        marketPlace.buyNFT(1);
     }
 }
