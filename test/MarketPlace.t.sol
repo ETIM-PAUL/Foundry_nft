@@ -132,32 +132,80 @@ contract TestHelpers is Helpers {
         );
     }
 
-    // function testIfSignatureIsValid() public {
-    //     switchSigner(userA);
-    //     nft.approve(address(marketPlace), 1);
-    //     newOrder.deadline = uint88(block.timestamp + 36001);
-    //     newOrder.signature = constructSig(
-    //         newOrder.tokenAddress,
-    //         newOrder.tokenId,
-    //         newOrder.nftPrice,
-    //         newOrder.deadline,
-    //         newOrder.owner,
-    //         keyUserB
-    //     );
-    //     vm.expectRevert("Invalid Signature");
-    //     marketPlace.putNFTForSale(
-    //         newOrder.signature,
-    //         newOrder.tokenId,
-    //         newOrder.tokenAddress,
-    //         newOrder.nftPrice,
-    //         newOrder.deadline
-    //     );
-
-    // }
+    function testIfSignatureIsValid() public {
+        switchSigner(userA);
+        nft.approve(address(marketPlace), 1);
+        newOrder.active = true;
+        newOrder.deadline = uint88(block.timestamp + 36001);
+        newOrder.signature = constructSig(
+            newOrder.tokenAddress,
+            newOrder.tokenId,
+            newOrder.nftPrice,
+            uint88(newOrder.deadline),
+            newOrder.owner,
+            keyUserB
+        );
+        vm.expectRevert("Invalid Signature");
+        marketPlace.putNFTForSale(
+            newOrder.signature,
+            newOrder.tokenId,
+            newOrder.tokenAddress,
+            newOrder.nftPrice,
+            newOrder.deadline
+        );
+    }
 
     function test_InactiveListing() external {
         switchSigner(userA);
         vm.expectRevert("Listing not active");
         marketPlace.buyNFT(1);
+    }
+
+    function test_DeadlinePassed() external {
+        switchSigner(userA);
+        newOrder.active = true;
+        newOrder.deadline = block.timestamp + 36001;
+        nft.approve(address(marketPlace), 1);
+        newOrder.signature = constructSig(
+            newOrder.tokenAddress,
+            newOrder.tokenId,
+            newOrder.nftPrice,
+            uint88(newOrder.deadline),
+            newOrder.owner,
+            keyUserB
+        );
+        marketPlace.putNFTForSale(
+            newOrder.signature,
+            newOrder.tokenId,
+            newOrder.tokenAddress,
+            newOrder.nftPrice,
+            newOrder.deadline
+        );
+        vm.expectRevert("Deadline passed");
+        marketPlace.buyNFT{value: 0.1 ether}(1);
+    }
+
+    function test_IncorrectValue() external {
+        switchSigner(userA);
+        nft.approve(address(marketPlace), 1);
+        newOrder.deadline = uint88(block.timestamp + 36001);
+        newOrder.signature = constructSig(
+            newOrder.tokenAddress,
+            newOrder.tokenId,
+            newOrder.nftPrice,
+            uint88(newOrder.deadline),
+            newOrder.owner,
+            keyUserB
+        );
+        marketPlace.putNFTForSale(
+            newOrder.signature,
+            newOrder.tokenId,
+            newOrder.tokenAddress,
+            newOrder.nftPrice,
+            newOrder.deadline
+        );
+        switchSigner(userB);
+        vm.expectRevert("Incorrect Eth Value");
+        marketPlace.buyNFT{value: 0.1 ether}(1);
     }
 }
