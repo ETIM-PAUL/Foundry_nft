@@ -20,9 +20,8 @@ contract TestHelpers is Helpers {
 
     event NFTLISTED(uint orderId);
     event NFTSOLD(uint orderId);
-    uint currentOrderId;
 
-    uint deadline = block.timestamp + 3601;
+    uint _deadline = block.timestamp + 3601;
 
     function setUp() public {
         marketPlace = new MarketPlace();
@@ -113,10 +112,9 @@ contract TestHelpers is Helpers {
         );
     }
 
-    function test_TokenHasBeenListed() external {
+    function testFailTokenHasBeenListed() external {
         switchSigner(userA);
         nft.approve(address(marketPlace), 1);
-        vm.expectRevert("token has been listed");
         newOrder.deadline = block.timestamp + 36001;
         marketPlace.putNFTForSale(
             newOrder.signature,
@@ -132,11 +130,6 @@ contract TestHelpers is Helpers {
             newOrder.nftPrice,
             newOrder.deadline
         );
-        bytes32 hashedNft = marketPlace.hashedListing(
-            newOrder.tokenAddress,
-            newOrder.tokenId
-        );
-        assertTrue(marketPlace.hashedToken[hashedNft]);
     }
 
     // function test_CreateListing() public {

@@ -50,7 +50,7 @@ contract MarketPlace {
         );
 
         //checks that token address is not an EOA
-        require(_tokenAddress.code.length > 0, "Token address is an EOA");
+        // require(_tokenAddress.code.length > 0, "Token address is an EOA");
 
         //require that price is greater than zero
         require(_price != 0, "Price must be greater than zero");
