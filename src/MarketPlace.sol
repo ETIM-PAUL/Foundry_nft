@@ -66,6 +66,16 @@ contract MarketPlace {
         //checks if the nft has not been listed before
         require(!hashedToken[hashedVal], "token has been listed");
 
+        bool isVerified = Utils.verify(
+            msg.sender,
+            _tokenAddress,
+            _tokenId,
+            _price,
+            _deadline,
+            _signature
+        );
+        require(isVerified, "Invalid Signature");
+
         orderId++;
         Order storage newOrder = allOrders[orderId];
         newOrder.owner = msg.sender;
@@ -87,18 +97,8 @@ contract MarketPlace {
         uint tokenId = order.tokenId;
         uint nftPrice = order.nftPrice;
         uint deadline = order.deadline;
-        bytes memory signature = order.signature;
         bool active = order.active;
 
-        bool isVerified = Utils.verify(
-            owner,
-            tokenAddress,
-            tokenId,
-            nftPrice,
-            deadline,
-            signature
-        );
-        require(isVerified, "Invalid Signature");
         require(active, "Listing not active");
         require(deadline < block.timestamp, "Deadline passed");
         require(msg.value == nftPrice, "Incorrect Eth Value");
