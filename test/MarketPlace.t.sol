@@ -34,7 +34,7 @@ contract TestHelpers is Helpers {
         nft.mintTo(userA);
 
         newOrder = MarketPlace.Order({
-            owner: userA,
+            owner: address(0),
             tokenAddress: address(nft),
             tokenId: 1,
             nftPrice: 0.1 ether,
@@ -132,25 +132,25 @@ contract TestHelpers is Helpers {
         );
     }
 
-    // function test_CreateListing() public {
-    //     //List NFT
-    //     vm.startPrank(0x9d4eF81F5225107049ba08F69F598D97B31ea644);
-    //     bytes memory sig = constructSig(address(nft), token_id, 1e15, nftOwner);
-    //     vm.expectEmit(true, false, false, false);
-    //     // The event we expect
-    //     emit NFTLISTED(1);
-    //     marketPlace.putNFTForSale(sig, token_id, address(nft), 1e15, deadline);
-    //     orderId = 1;
-    //     vm.stopPrank();
-
-    //     vm.warp(block.timestamp + 3800);
-    //     //Buy NFT
-    //     vm.startPrank(0x1b6e16403b06a51C42Ba339E356a64fE67348e92);
-    //     vm.deal(0x1b6e16403b06a51C42Ba339E356a64fE67348e92, 1e18);
-    //     vm.expectEmit(true, false, false, false);
-    //     // The event we expect
-    //     emit NFTSOLD(1);
-    //     marketPlace.buyNFT{value: 0.001 ether}(orderId);
-    //     vm.stopPrank();
-    // }
+    function testIfSignatureIsValid() public {
+        switchSigner(userA);
+        nft.approve(address(marketPlace), 1);
+        newOrder.deadline = uint88(block.timestamp + 36001);
+        newOrder.signature = constructSig(
+            newOrder.tokenAddress,
+            newOrder.tokenId,
+            newOrder.nftPrice,
+            newOrder.deadline,
+            newOrder.owner,
+            keyUserB
+        );
+        vm.expectRevert("Invalid Signature");
+        marketPlace.putNFTForSale(
+            newOrder.signature,
+            newOrder.tokenId,
+            newOrder.tokenAddress,
+            newOrder.nftPrice,
+            newOrder.deadline
+        );
+    }
 }
