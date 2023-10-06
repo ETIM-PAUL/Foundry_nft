@@ -2,11 +2,14 @@
 pragma solidity 0.8.19;
 
 import "./interface/ERC721.sol";
+import {Utils} from "./library/marketPlaceUtils.sol";
 
 contract MarketPlace {
-    event NFTSOLD(uint orderId);
+    event NFTSold(uint256 indexed orderId, Order);
 
-    event NFTLISTED(uint orderId);
+    event NFTListed(uint256 indexed orderId, Order);
+
+    event NFTOrderEdited(uint indexed orderId, Order);
 
     struct Order {
         address owner;
@@ -26,41 +29,6 @@ contract MarketPlace {
     uint orderId;
 
     constructor() {}
-
-    function getOrderHash(
-        address _tokenAddress,
-        uint _tokenId,
-        uint _price,
-        address _nftOwner,
-        uint deadline
-    ) public pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encodePacked(
-                    _tokenAddress,
-                    _tokenId,
-                    _price,
-                    _nftOwner,
-                    deadline
-                )
-            );
-    }
-
-    function getEthSignedOrderHash(
-        bytes32 _messageHash
-    ) public pure returns (bytes32) {
-        /*
-        Signature is produced by signing a keccak256 hash with the following format:
-        "\x19Ethereum Signed Message\n" + len(msg) + msg
-        */
-        return
-            keccak256(
-                abi.encodePacked(
-                    "\x19Ethereum Signed Message:\n32",
-                    _messageHash
-                )
-            );
-    }
 
     function putNFTForSale(
         bytes memory _signature,
@@ -85,7 +53,7 @@ contract MarketPlace {
         require(_tokenAddress != address(0), "Zero address not allowed");
 
         //checks that token address is not an EOA
-        require(isContract(_tokenAddress), "Token address is an EOA");
+        require(Utils.isContract(_tokenAddress), "Token address is an EOA");
 
         //require that price is greater than zero
         require(_price != 0, "Price must be greater than zero");
@@ -112,7 +80,7 @@ contract MarketPlace {
         newOrder.active = true;
         hashedToken[hashedVal] = true;
 
-        emit NFTLISTED(orderId);
+        emit NFTListed(orderId, newOrder);
     }
 
     function buyNFT(uint _orderId) public payable {
@@ -125,7 +93,7 @@ contract MarketPlace {
         bytes memory signature = order.signature;
         bool active = order.active;
 
-        bool isVerified = verify(
+        bool isVerified = Utils.verify(
             owner,
             tokenAddress,
             tokenId,
@@ -147,70 +115,26 @@ contract MarketPlace {
         require(callSuccess, "NFT Purchased failed");
         ERC721(tokenAddress).safeTransferFrom(owner, msg.sender, tokenId);
 
-        emit NFTSOLD(_orderId);
+        emit NFTSold(_orderId, order);
     }
 
-    function verify(
-        address _nftOwner,
-        address _tokenAddress,
-        uint _tokenId,
-        uint _price,
-        uint _deadline,
-        bytes memory signature
-    ) public pure returns (bool) {
-        bytes32 messageHash = getOrderHash(
-            _tokenAddress,
-            _tokenId,
-            _price,
-            _nftOwner,
-            _deadline
-        );
-        bytes32 ethSignedOrderHash = getEthSignedOrderHash(messageHash);
-
-        return recoverSigner(ethSignedOrderHash, signature) == _nftOwner;
+    // add getter for listing
+    function getOrder(uint256 _orderId) public view returns (Order memory) {
+        // if (_listingId >= listingId)
+        return allOrders[_orderId];
     }
 
-    function recoverSigner(
-        bytes32 ethSignedOrderHash,
-        bytes memory _signature
-    ) public pure returns (address) {
-        (bytes32 r, bytes32 s, uint8 v) = splitSignature(_signature);
-
-        return ecrecover(ethSignedOrderHash, v, r, s);
-    }
-
-    function splitSignature(
-        bytes memory sig
-    ) public pure returns (bytes32 r, bytes32 s, uint8 v) {
-        require(sig.length == 65, "invalid signature length");
-
-        assembly {
-            /*
-            First 32 bytes stores the length of the signature
-
-            add(sig, 32) = pointer of sig + 32
-            effectively, skips first 32 bytes of signature
-
-            mload(p) loads next 32 bytes starting at the memory address p into memory
-            */
-
-            // first 32 bytes, after the length prefix
-            r := mload(add(sig, 32))
-            // second 32 bytes
-            s := mload(add(sig, 64))
-            // final byte (first byte of the next 32 bytes)
-            v := byte(0, mload(add(sig, 96)))
-        }
-    }
-
-    //check if an account is a contract
-    function isContract(address _add) private view returns (bool) {
-        uint32 size;
-        address a = _add;
-        assembly {
-            size := extcodesize(a)
-        }
-        return (size > 0);
+    function editOrder(
+        uint256 _orderId,
+        uint256 _newPrice,
+        bool _active
+    ) public {
+        require(_orderId >= orderId, "Order Doesn't Exist");
+        Order storage _order = allOrders[_orderId];
+        require(_order.owner == msg.sender, "Not Owner");
+        _order.nftPrice = _newPrice;
+        _order.active = _active;
+        emit NFTOrderEdited(_orderId, _order);
     }
 
     //function to hash token listing to avoind duplicate
