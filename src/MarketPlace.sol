@@ -31,12 +31,12 @@ contract MarketPlace {
     constructor() {}
 
     function putNFTForSale(
-        bytes memory _signature,
-        uint _tokenId,
         address _tokenAddress,
+        uint _tokenId,
         uint _price,
-        uint _deadline
-    ) public {
+        uint _deadline,
+        bytes memory _signature
+    ) public returns (uint _orderId) {
         //checks that the seller is the owner of the nft
         require(
             ERC721(_tokenAddress).ownerOf(_tokenId) == msg.sender,
@@ -71,7 +71,7 @@ contract MarketPlace {
             _tokenAddress,
             _tokenId,
             _price,
-            _deadline,
+            uint256(_deadline),
             _signature
         );
         require(isVerified, "Invalid Signature");
@@ -86,6 +86,8 @@ contract MarketPlace {
         newOrder.tokenAddress = _tokenAddress;
         newOrder.active = true;
         hashedToken[hashedVal] = true;
+
+        _orderId = orderId;
 
         emit NFTListed(orderId, newOrder);
     }

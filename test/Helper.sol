@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {Test, console2} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import "../src/library/marketPlaceUtils.sol";
 
 abstract contract Helpers is Test {
@@ -19,7 +19,7 @@ abstract contract Helpers is Test {
         address _token,
         uint256 _tokenId,
         uint256 _price,
-        uint88 _deadline,
+        uint256 _deadline,
         address _seller,
         uint256 privKey
     ) public pure returns (bytes memory sig) {

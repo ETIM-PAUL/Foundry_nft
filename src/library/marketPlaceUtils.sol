@@ -6,8 +6,8 @@ library Utils {
         address _tokenAddress,
         uint _tokenId,
         uint _price,
-        address _nftOwner,
-        uint deadline
+        uint deadline,
+        address _nftOwner
     ) public pure returns (bytes32) {
         return
             keccak256(
@@ -15,8 +15,8 @@ library Utils {
                     _tokenAddress,
                     _tokenId,
                     _price,
-                    _nftOwner,
-                    deadline
+                    deadline,
+                    _nftOwner
                 )
             );
     }
@@ -49,8 +49,8 @@ library Utils {
             _tokenAddress,
             _tokenId,
             _price,
-            _nftOwner,
-            _deadline
+            _deadline,
+            _nftOwner
         );
         bytes32 ethSignedOrderHash = getEthSignedOrderHash(messageHash);
 
