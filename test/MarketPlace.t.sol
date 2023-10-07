@@ -255,4 +255,34 @@ contract TestHelpers is Helpers {
         marketPlace.buyNFT{value: 0.1 ether}(order_id);
         assertEq(nft.ownerOf(order_id), userB);
     }
+
+    function test_TestIfOrderExistBeforeEditing() external {
+        switchSigner(userA);
+        vm.expectRevert("Order Doesn't Exist");
+        marketPlace.editOrder(1, 0.1 ether, true);
+    }
+
+    function test_TestIfOrderOwnerBeforeEditing() external {
+        switchSigner(userA);
+        newOrder.deadline = block.timestamp + 120 minutes;
+        nft.approve(address(marketPlace), 1);
+        newOrder.signature = constructSig(
+            newOrder.tokenAddress,
+            newOrder.tokenId,
+            newOrder.nftPrice,
+            newOrder.deadline,
+            newOrder.owner,
+            privKeyA
+        );
+        uint order_id = marketPlace.putNFTForSale(
+            newOrder.tokenAddress,
+            newOrder.tokenId,
+            newOrder.nftPrice,
+            newOrder.deadline,
+            newOrder.signature
+        );
+        switchSigner(userB);
+        vm.expectRevert("Not Owner");
+        marketPlace.editOrder(order_id, 0.1 ether, true);
+    }
 }

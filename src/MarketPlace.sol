@@ -128,7 +128,7 @@ contract MarketPlace {
         uint256 _newPrice,
         bool _active
     ) public {
-        require(_orderId >= orderId, "Order Doesn't Exist");
+        require(_orderId <= orderId, "Order Doesn't Exist");
         Order storage _order = allOrders[_orderId];
         require(_order.owner == msg.sender, "Not Owner");
         _order.nftPrice = _newPrice;
